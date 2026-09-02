@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<title>Swing Desk</title>
+<style>
+  :root {
+    --ink: #12161c;
+    --ink-raised: #1a2029;
+    --line: #262e3a;
+    --paper: #e9ecf1;
+    --paper-dim: #8992a3;
+    --buy: #4fae7d;
+    --buy-dim: #2c3d33;
+    --risk: #c9704a;
+    --risk-dim: #3d2e26;
+    --mono: 'SF Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: -apple-system, 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    padding-bottom: 90px;
+    min-height: 100vh;
+  }
+  header {
+    padding: 20px 18px 14px;
+    position: sticky;
+    top: 0;
+    background: var(--ink);
+    z-index: 5;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 {
+    font-size: 20px;
+    margin: 0 0 2px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--paper-dim);
+    margin-top: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--paper-dim); }
+  .dot.live { background: var(--buy); }
+  main { padding: 16px; }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 10px;
+    background: var(--ink-raised);
+    color: var(--paper-dim);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+  }
+  .tab.active { color: var(--paper); border-color: var(--buy); }
+  .card {
+    background: var(--ink-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .signal-card { border-color: var(--buy-dim); }
+  .signal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .symbol { font-size: 17px; font-weight: 600; }
+  .rr-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--buy);
+    background: var(--buy-dim);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .price-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    font-family: var(--mono);
+  }
+  .price-cell .label { font-size: 11px; color: var(--paper-dim); margin-bottom: 2px; }
+  .price-cell .value { font-size: 16px; }
+  .price-cell.entry .value { color: var(--paper); }
+  .price-cell.target .value { color: var(--buy); }
+  .price-cell.stop .value { color: var(--risk); }
+  .meta-line {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--paper-dim);
+  }
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--paper-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  input, button {
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+  .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  input {
+    flex: 1;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--paper);
+  }
+  input::placeholder { color: var(--paper-dim); }
+  button {
+    background: var(--buy);
+    color: var(--ink);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 600;
+  }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--paper);
+  }
+  .watch-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .watch-item:last-child { border-bottom: none; }
+  .remove-btn {
+    background: none;
+    color: var(--risk);
+    padding: 4px 8px;
+    font-weight: 400;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat .label { font-size: 11px; color: var(--paper-dim); }
+  .stat .value { font-family: var(--mono); font-size: 20px; margin-top: 2px; }
+  .trade-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .trade-row .pos { color: var(--buy); }
+  .trade-row .neg { color: var(--risk); }
+  footer.tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    background: var(--ink-raised);
+    border-top: 1px solid var(--line);
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  footer.tabbar button {
+    flex: 1;
+    background: none;
+    color: var(--paper-dim);
+    padding: 10px 0;
+    font-weight: 500;
+  }
+  footer.tabbar button.active { color: var(--buy); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Swing Desk</h1>
+  <div class="status-row">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">Checking market status…</span>
+    <button id="alertsBtn" class="secondary" style="margin-left:auto;padding:4px 10px;font-size:12px" onclick="toggleAlerts()">Enable alerts</button>
+  </div>
+</header>
+
+<main>
+  <section id="view-signals">
+    <div id="signalsList" class="empty">Loading signals…</div>
+  </section>
+
+  <section id="view-watchlist" style="display:none">
+    <div class="card">
+      <div class="form-row">
+        <input id="wlSearch" placeholder="Search e.g. TCS, Reliance" oninput="searchSymbols()">
+      </div>
+      <div id="searchResults"></div>
+    </div>
+    <div class="card" id="watchlistCard">
+      <div class="empty">No symbols yet. Search above to add one.</div>
+    </div>
+  </section>
+
+  <section id="view-backtest" style="display:none">
+    <div class="card">
+      <div class="form-row">
+        <input id="btSymbol" placeholder="Trading symbol e.g. TCS-EQ">
+      </div>
+      <div class="form-row">
+        <input id="btToken" placeholder="Symbol token">
+        <input id="btExchange" placeholder="Exchange" value="NSE" style="max-width:90px">
+      </div>
+      <div class="form-row">
+        <input id="btDays" placeholder="History (days)" value="500" type="number">
+      </div>
+      <button style="width:100%" onclick="runBacktest()">Run backtest</button>
+    </div>
+    <div id="backtestResult"></div>
+  </section>
+</main>
+
+<footer class="tabbar">
+  <button id="tabSignals" class="active" onclick="showView('signals')">Live Signals</button>
+  <button id="tabWatchlist" onclick="showView('watchlist')">Watchlist</button>
+  <button id="tabBacktest" onclick="showView('backtest')">Backtest</button>
+</footer>
+
+<script>
+  // Point this at wherever you deploy backend/main.py
+  const API_BASE = "http://localhost:8000";
+
+  function showView(name) {
+    ['signals', 'watchlist', 'backtest'].forEach(v => {
+      document.getElementById('view-' + v).style.display = v === name ? 'block' : 'none';
+      document.getElementById('tab' + v[0].toUpperCase() + v.slice(1)).classList.toggle('active', v === name);
+    });
+    if (name === 'watchlist') loadWatchlistDisplay();
+  }
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      const data = await res.json();
+      document.getElementById('statusDot').classList.toggle('live', data.market_open);
+      document.getElementById('statusText').textContent =
+        data.market_open ? 'Market open — scanning live' : 'Market closed';
+    } catch (e) {
+      document.getElementById('statusText').textContent = 'Backend unreachable';
+    }
+  }
+
+  function signalCardHtml(s) {
+    if (s.error) {
+      return `<div class="card"><div class="symbol">${s.trading_symbol}</div>
+        <div class="meta-line">Error: ${s.error}</div></div>`;
+    }
+    return `
+      <div class="card signal-card">
+        <div class="signal-top">
+          <span class="symbol">${s.trading_symbol}</span>
+          <span class="rr-badge">R:R ${s.risk_reward}</span>
+        </div>
+        <div class="price-grid">
+          <div class="price-cell entry"><div class="label">ENTRY</div><div class="value">₹${s.entry_price}</div></div>
+          <div class="price-cell target"><div class="label">TARGET</div><div class="value">₹${s.target_price}</div></div>
+          <div class="price-cell stop"><div class="label">STOP</div><div class="value">₹${s.stop_loss}</div></div>
+        </div>
+        <div class="meta-line">RSI ${s.rsi} · hold ~${s.hold_days} trading days · ${s.timestamp}</div>
+      </div>`;
+  }
+
+  async function loadSignals() {
+    const el = document.getElementById('signalsList');
+    try {
+      const res = await fetch(`${API_BASE}/signals/live`);
+      const data = await res.json();
+      if (!data.market_open) {
+        el.className = 'empty';
+        el.innerHTML = 'Market is closed. Signals scan runs 9:15–15:30 IST.';
+        return;
+      }
+      if (!data.signals.length) {
+        el.className = 'empty';
+        el.innerHTML = 'No high-confidence setups right now.<br>The filter is strict on purpose — quiet days are normal.';
+        return;
+      }
+      el.className = '';
+      el.innerHTML = data.signals.map(signalCardHtml).join('');
+    } catch (e) {
+      el.className = 'empty';
+      el.innerHTML = 'Could not reach backend. Check API_BASE and that the server is running.';
+    }
+  }
+
+  let searchTimer;
+  function searchSymbols() {
+    clearTimeout(searchTimer);
+    const q = document.getElementById('wlSearch').value.trim();
+    const resultsEl = document.getElementById('searchResults');
+    if (q.length < 2) { resultsEl.innerHTML = ''; return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/symbols/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        resultsEl.innerHTML = data.results.map(r => `
+          <div class="watch-item">
+            <span>${r.trading_symbol} — ${r.name}</span>
+            <button class="remove-btn" style="color:var(--buy)"
+              onclick='addToWatchlist(${JSON.stringify(r.trading_symbol)}, ${JSON.stringify(r.symbol_token)}, ${JSON.stringify(r.exchange)})'>Add</button>
+          </div>`).join('') || '<div class="empty">No matches</div>';
+      } catch (e) {
+        resultsEl.innerHTML = '<div class="empty">Search failed — check backend.</div>';
+      }
+    }, 300);
+  }
+
+  async function addToWatchlist(trading_symbol, symbol_token, exchange) {
+    await fetch(`${API_BASE}/watchlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trading_symbol, symbol_token, exchange })
+    });
+    document.getElementById('wlSearch').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+    loadWatchlistDisplay();
+  }
+
+  async function removeFromWatchlist(symbol) {
+    await fetch(`${API_BASE}/watchlist/${symbol}`, { method: 'DELETE' });
+    loadWatchlistDisplay();
+  }
+
+  async function loadWatchlistDisplay() {
+    const card = document.getElementById('watchlistCard');
+    try {
+      const res = await fetch(`${API_BASE}/watchlist`);
+      const data = await res.json();
+      if (!data.watchlist.length) {
+        card.innerHTML = '<div class="empty">No symbols yet. Add one above.</div>';
+      } else {
+        card.innerHTML = data.watchlist.map(s => `
+          <div class="watch-item">
+            <span>${s}</span>
+            <button class="remove-btn" onclick="removeFromWatchlist('${s}')">Remove</button>
+          </div>`).join('');
+      }
+    } catch (e) {
+      card.innerHTML = '<div class="empty">Could not reach backend.</div>';
+    }
+  }
+
+  async function runBacktest() {
+    const symbol_token = document.getElementById('btToken').value.trim();
+    const trading_symbol = document.getElementById('btSymbol').value.trim();
+    const exchange = document.getElementById('btExchange').value.trim() || 'NSE';
+    const days = parseInt(document.getElementById('btDays').value) || 500;
+    const resultEl = document.getElementById('backtestResult');
+    resultEl.innerHTML = '<div class="empty">Running backtest…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/backtest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol_token, trading_symbol, exchange, days })
+      });
+      const data = await res.json();
+      if (data.total_trades === 0) {
+        resultEl.innerHTML = '<div class="empty">No qualifying signals found in this history window.</div>';
+        return;
+      }
+      resultEl.innerHTML = `
+        <div class="card">
+          <div class="stat-grid">
+            <div class="stat"><div class="label">WIN RATE</div><div class="value">${data.win_rate_pct}%</div></div>
+            <div class="stat"><div class="label">AVG RETURN</div><div class="value">${data.avg_return_pct}%</div></div>
+            <div class="stat"><div class="label">TRADES</div><div class="value">${data.total_trades}</div></div>
+            <div class="stat"><div class="label">MAX DRAWDOWN</div><div class="value">${data.max_drawdown_pct}%</div></div>
+          </div>
+        </div>
+        <div class="card">
+          ${data.trades.map(t => `
+            <div class="trade-row">
+              <span>${t.entry_date.slice(0,10)} → ${t.exit_date.slice(0,10)}</span>
+              <span class="${t.return_pct >= 0 ? 'pos' : 'neg'}">${t.return_pct}% (${t.outcome})</span>
+            </div>`).join('')}
+        </div>`;
+    } catch (e) {
+      resultEl.innerHTML = '<div class="empty">Backtest failed. Check backend logs.</div>';
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+
+  async function toggleAlerts() {
+    const btn = document.getElementById('alertsBtn');
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Push notifications need this page installed to your iPhone home screen first (Safari → Share → Add to Home Screen), then opened from there.');
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { alert('Notifications permission denied.'); return; }
+
+      const reg = await navigator.serviceWorker.register('sw.js');
+      const keyRes = await fetch(`${API_BASE}/push/vapid-public-key`);
+      const { key } = await keyRes.json();
+      if (!key) { alert('Backend has no VAPID key configured yet — see README.'); return; }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+      await fetch(`${API_BASE}/push/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      btn.textContent = 'Alerts on';
+      btn.style.color = 'var(--buy)';
+    } catch (e) {
+      alert('Could not enable alerts: ' + e.message);
+    }
+  }
+
+  checkHealth();
+  loadSignals();
+  setInterval(checkHealth, 60000);
+  setInterval(loadSignals, 60000);
+</script>
+</body>
+</html>
